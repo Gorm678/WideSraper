@@ -512,16 +512,27 @@ with tab_config:
                 get_engine.clear(); st.success(f"Saved {len(cfg['partner_sites'])} sites.")
             except json.JSONDecodeError as e:
                 st.error(f"Invalid JSON: {e}")
+with st.expander("Master list management"):
+    if os.path.exists("master_list.csv"):
+        df_master = pd.read_csv("master_list.csv")
+        csv_bytes = df_master.to_csv(index=False).encode("utf-8")
+        st.markdown(f"**{len(df_master)} companies** tracked across all runs.")
+        st.download_button(
+            "Download master_list.csv",
+            csv_bytes,
+            file_name="master_list.csv",
+            mime="text/csv"
+        )
+    else:
+        st.markdown("**0 companies** tracked across all runs.")
 
-    with st.expander("Master list management"):
-        from masterlist import MasterList
-        ml = MasterList()
-        st.markdown(f"**{len(ml.records)} companies** tracked across all runs.")
-        st.download_button("Download master_list.csv", ml.to_csv_bytes(), file_name="master_list.csv")
-        st.markdown("---")
-        if st.button("Reset master list (delete all history)"):
-            if os.path.exists("master_list.csv"): os.remove("master_list.csv")
-            st.warning("Master list cleared.")
+    st.markdown("---")
+
+    if st.button("Reset master list (delete all history)"):
+        if os.path.exists("master_list.csv"):
+            os.remove("master_list.csv")
+        st.warning("Master list cleared.")
+    
 
     with st.expander("Raw config.json"):
         st.json(cfg)
