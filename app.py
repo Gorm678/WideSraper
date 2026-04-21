@@ -3,10 +3,14 @@ app.py — Citruss D365FO Discovery Tool
 Run with: streamlit run app.py
 """
 
-import os, json, glob
+import os
+import json
+import glob
+import csv as csv_mod
 from datetime import datetime
-import streamlit as st
+
 import pandas as pd
+import streamlit as st
 
 st.set_page_config(
     page_title="Citruss · ERP Discovery",
@@ -25,45 +29,100 @@ section[data-testid="stSidebar"] * { color: #e8eaf0 !important; }
 section[data-testid="stSidebar"] .stSelectbox label,
 section[data-testid="stSidebar"] .stMultiSelect label,
 section[data-testid="stSidebar"] .stTextInput label {
-    color: #8892a4 !important; font-size: 0.75rem;
-    text-transform: uppercase; letter-spacing: 0.08em;
+    color: #8892a4 !important;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
 }
 .header-bar {
     background: linear-gradient(135deg, #0f1117 0%, #1a1f2e 100%);
     border-bottom: 2px solid #2d6ef7;
-    padding: 1.5rem 2rem; margin: -1rem -1rem 2rem -1rem;
-    display: flex; align-items: center; gap: 1rem;
+    padding: 1.5rem 2rem;
+    margin: -1rem -1rem 2rem -1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
-.header-title { font-family: 'DM Serif Display', serif; font-size: 1.8rem; color: white; margin: 0; }
-.header-sub { color: #6b7a99; font-size: 0.85rem; margin: 0; font-weight: 300; }
-.header-dot { width: 10px; height: 10px; background: #2d6ef7; border-radius: 50%; box-shadow: 0 0 12px #2d6ef7; }
-.metric-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 2rem; }
-.metric-card { background: #f8f9fc; border: 1px solid #e8eaf0; border-radius: 10px; padding: 1.2rem 1.5rem; border-left: 3px solid #2d6ef7; }
+.header-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem;
+    color: white;
+    margin: 0;
+}
+.header-sub {
+    color: #6b7a99;
+    font-size: 0.85rem;
+    margin: 0;
+    font-weight: 300;
+}
+.header-dot {
+    width: 10px;
+    height: 10px;
+    background: #2d6ef7;
+    border-radius: 50%;
+    box-shadow: 0 0 12px #2d6ef7;
+}
+.metric-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+.metric-card {
+    background: #f8f9fc;
+    border: 1px solid #e8eaf0;
+    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+    border-left: 3px solid #2d6ef7;
+}
 .metric-card.green  { border-left-color: #10b981; }
 .metric-card.orange { border-left-color: #f59e0b; }
 .metric-card.purple { border-left-color: #8b5cf6; }
 .metric-card.red    { border-left-color: #ef4444; }
-.metric-number { font-size: 2rem; font-weight: 700; color: #0f1117; line-height: 1; }
-.metric-label { font-size: 0.75rem; color: #6b7a99; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.3rem; }
-.new-badge  { background: #d1fae5; color: #065f46; padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
-.seen-badge { background: #fef3c7; color: #92400e; padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
-.crm-badge  { background: #dbeafe; color: #1d4ed8; padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
-.done-badge { background: #f3f4f6; color: #6b7280; padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+.metric-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0f1117;
+    line-height: 1;
+}
+.metric-label {
+    font-size: 0.75rem;
+    color: #6b7a99;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 0.3rem;
+}
 .section-header {
-    font-family: 'DM Serif Display', serif; font-size: 1.3rem; color: #0f1117;
-    margin: 2rem 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 1px solid #e8eaf0;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    color: #0f1117;
+    margin: 2rem 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e8eaf0;
 }
 .log-box {
-    background: #0f1117; border-radius: 8px; padding: 1rem;
-    font-family: monospace; font-size: 0.8rem; color: #8892a4;
-    max-height: 300px; overflow-y: auto; line-height: 1.6;
+    background: #0f1117;
+    border-radius: 8px;
+    padding: 1rem;
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #8892a4;
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.6;
 }
 .log-line-ok   { color: #10b981; }
 .log-line-warn { color: #f59e0b; }
 .log-line-info { color: #6b7a99; }
 div.stButton > button[kind="primary"] {
-    background: #2d6ef7; color: white; border: none; border-radius: 8px;
-    padding: 0.6rem 2rem; font-weight: 600; font-size: 0.9rem; transition: background 0.2s;
+    background: #2d6ef7;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 2rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background 0.2s;
 }
 div.stButton > button[kind="primary"]:hover { background: #1d5ce0; }
 </style>
@@ -79,27 +138,82 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+
+def load_master_df():
+    if os.path.exists("master_list.csv"):
+        try:
+            return pd.read_csv("master_list.csv")
+        except Exception:
+            return pd.DataFrame()
+    return pd.DataFrame()
+
+
+def get_status_counts(df: pd.DataFrame):
+    total = len(df)
+
+    status_col = None
+    for candidate in ["status", "classification"]:
+        if candidate in df.columns:
+            status_col = candidate
+            break
+
+    if status_col:
+        new_count = len(df[df[status_col] == "new"])
+        seen_count = len(df[df[status_col] == "seen"])
+        crm_count = len(df[df[status_col].isin(["crm", "actioned_crm"])])
+        dismissed_count = len(df[df[status_col].isin(["dismissed", "actioned_dismissed"])])
+    else:
+        new_count = 0
+        seen_count = 0
+        crm_count = 0
+        dismissed_count = 0
+
+    return {
+        "total": total,
+        "new": new_count,
+        "seen": seen_count,
+        "crm": crm_count,
+        "dismissed": dismissed_count,
+    }
+
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### API Keys")
-    fc_key = st.text_input("Firecrawl API Key", type="password",
-                           value=os.environ.get("FIRECRAWL_API_KEY",""))
+    fc_key = st.text_input(
+        "Firecrawl API Key",
+        type="password",
+        value=os.environ.get("FIRECRAWL_API_KEY", "")
+    )
+
     ai_provider = st.selectbox("AI Provider", ["OpenAI (GPT-4o)", "Anthropic (Claude)"])
+
     if "OpenAI" in ai_provider:
-        ai_key = st.text_input("OpenAI API Key", type="password",
-                               value=os.environ.get("OPENAI_API_KEY",""))
+        ai_key = st.text_input(
+            "OpenAI API Key",
+            type="password",
+            value=os.environ.get("OPENAI_API_KEY", "")
+        )
     else:
-        ai_key = st.text_input("Anthropic API Key", type="password",
-                               value=os.environ.get("ANTHROPIC_API_KEY",""))
+        ai_key = st.text_input(
+            "Anthropic API Key",
+            type="password",
+            value=os.environ.get("ANTHROPIC_API_KEY", "")
+        )
+
     st.markdown("---")
     st.markdown("### Countries")
-    countries = st.multiselect("Run discovery for",
-                               ["Denmark","Sweden","Norway"],
-                               default=["Denmark","Sweden","Norway"])
+    countries = st.multiselect(
+        "Run discovery for",
+        ["Denmark", "Sweden", "Norway"],
+        default=["Denmark", "Sweden", "Norway"]
+    )
+
     st.markdown("---")
     st.markdown("### Settings")
-    use_ai       = st.toggle("Enable AI enrichment", value=True)
+    use_ai = st.toggle("Enable AI enrichment", value=True)
     result_limit = st.slider("Results per query", 5, 20, 10)
+
 
 # ── Load engine ───────────────────────────────────────────────────────────────
 @st.cache_resource
@@ -107,11 +221,13 @@ def get_engine():
     from engine import DiscoveryEngine
     return DiscoveryEngine(config_path="config.json", feedback_path="feedback.csv")
 
+
 try:
     engine = get_engine()
 except Exception as e:
     st.error(f"Failed to load engine: {e}")
     st.stop()
+
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
 tab_leads, tab_run, tab_cases, tab_history, tab_config = st.tabs([
@@ -122,29 +238,13 @@ tab_leads, tab_run, tab_cases, tab_history, tab_config = st.tabs([
     "⚙️ Config",
 ])
 
+
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — LEADS (rep view)
+# TAB 1 — LEADS
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_leads:
-    if os.path.exists("master_list.csv"):
-    df_master = pd.read_csv("master_list.csv")
-else:
-    df_master = pd.DataFrame()
-
-total = len(df_master)
-
-new_count = len(df_master[df_master["status"] == "new"]) if "status" in df_master.columns else 0
-seen_count = len(df_master[df_master["status"] == "seen"]) if "status" in df_master.columns else 0
-crm_count = len(df_master[df_master["status"] == "crm"]) if "status" in df_master.columns else 0
-dismissed_count = len(df_master[df_master["status"] == "dismissed"]) if "status" in df_master.columns else 0
-
-stats = {
-    "total": total,
-    "new": new_count,
-    "seen": seen_count,
-    "crm": crm_count,
-    "dismissed": dismissed_count,
-}
+    df_master = load_master_df()
+    stats = get_status_counts(df_master)
 
     st.markdown(f"""
     <div class="metric-row">
@@ -171,144 +271,73 @@ stats = {
     </div>
     """, unsafe_allow_html=True)
 
-    # Filters
-    fc1, fc2, fc3, fc4 = st.columns(4)
-    with fc1:
-        f_status = st.multiselect("Status",
-                                  ["new","seen","actioned_crm","actioned_dismissed"],
-                                  default=["new","seen"])
-    with fc2:
-        all_countries = sorted({r["country"] for r in master.get_all()}) or ["Denmark","Sweden","Norway"]
-        f_country = st.multiselect("Country", all_countries, default=all_countries)
-    with fc3:
-        all_erps = sorted({r["erp_detected"] for r in master.get_all()}) or ["D365FO"]
-        f_erp = st.multiselect("ERP", all_erps, default=all_erps)
-    with fc4:
-        f_search = st.text_input("Search", placeholder="Company name...")
-
-    # Export buttons
-    _, ex1, ex2 = st.columns([2,1,1])
-    with ex1:
-        st.download_button("⬇ Export new leads",
-                           data=master.to_csv_bytes(status_filter=["new"]),
-                           file_name=f"new_leads_{datetime.now().strftime('%Y%m%d')}.csv",
-                           mime="text/csv", use_container_width=True)
-    with ex2:
-        st.download_button("⬇ Export all",
-                           data=master.to_csv_bytes(),
-                           file_name=f"all_companies_{datetime.now().strftime('%Y%m%d')}.csv",
-                           mime="text/csv", use_container_width=True)
-
     st.markdown('<p class="section-header">Companies</p>', unsafe_allow_html=True)
 
-    all_records = master.get_all()
-    filtered = [
-        r for r in all_records
-        if r.get("status") in f_status
-        and r.get("country","") in f_country
-        and r.get("erp_detected","") in f_erp
-        and (not f_search or f_search.lower() in r.get("company_name","").lower())
-    ]
-
-    if not filtered:
-        if stats["total"] == 0:
-            st.info("No companies yet. Run a discovery or scrape case studies first.")
-        else:
-            st.info("No companies match the current filters.")
+    if df_master.empty:
+        st.info("No companies yet. Run a discovery or scrape case studies first.")
     else:
-        st.caption(f"Showing {len(filtered)} of {stats['total']} companies")
+        view_df = df_master.copy()
 
-    for rec in filtered:
-        status = rec.get("status","new")
-        badge_map = {
-            "new":                "<span class='new-badge'>NEW</span>",
-            "seen":               "<span class='seen-badge'>SEEN BEFORE</span>",
-            "actioned_crm":       "<span class='crm-badge'>IN CRM</span>",
-            "actioned_dismissed": "<span class='done-badge'>DISMISSED</span>",
-        }
-        badge      = badge_map.get(status, "")
-        times      = rec.get("times_seen","1")
-        first_seen = rec.get("first_seen","")
-        last_seen  = rec.get("last_seen","")
-        seen_txt   = f"First seen {first_seen}" if times=="1" else f"Seen {times}x · last {last_seen}"
+        filter_cols = st.columns(3)
 
-        with st.expander(
-            f"{rec.get('company_name','—')}  |  {rec.get('country','')}  |  {rec.get('erp_detected','')}",
-            expanded=(status=="new"),
-        ):
-            hcol1, hcol2 = st.columns([3,1])
-            with hcol1:
-                st.markdown(f"{badge} &nbsp; <small style='color:#8892a4'>{seen_txt}</small>",
-                            unsafe_allow_html=True)
-            with hcol2:
-                url = rec.get("best_evidence_url","")
-                if url:
-                    st.markdown(f"[View source]({url})")
+        with filter_cols[0]:
+            if "country" in view_df.columns:
+                countries_available = sorted(view_df["country"].dropna().astype(str).unique().tolist())
+                selected_countries = st.multiselect(
+                    "Country",
+                    countries_available,
+                    default=countries_available
+                )
+                if selected_countries:
+                    view_df = view_df[view_df["country"].astype(str).isin(selected_countries)]
 
-            ic1, ic2, ic3 = st.columns(3)
-            with ic1:
-                st.markdown(f"**ERP:** {rec.get('erp_detected','—')}")
-                st.markdown(f"**Country:** {rec.get('country','—')}")
-            with ic2:
-                st.markdown(f"**Evidence:** {rec.get('best_evidence_type','—')}")
-                st.markdown(f"**Found via:** {rec.get('source_owner','—')}")
-            with ic3:
-                title = rec.get("best_evidence_title","")
-                if title:
-                    st.markdown(f"**Page:** {title[:70]}")
+        with filter_cols[1]:
+            erp_col = "erp_detected" if "erp_detected" in view_df.columns else None
+            if erp_col:
+                erp_available = sorted(view_df[erp_col].dropna().astype(str).unique().tolist())
+                selected_erp = st.multiselect("ERP", erp_available, default=erp_available)
+                if selected_erp:
+                    view_df = view_df[view_df[erp_col].astype(str).isin(selected_erp)]
 
-            snippet = rec.get("best_snippet","")
-            if snippet:
-                st.markdown(f"> {snippet[:350]}")
+        with filter_cols[2]:
+            search_text = st.text_input("Search company", placeholder="Company name...")
+            if search_text:
+                company_col = None
+                for candidate in ["company_name", "target_company", "name"]:
+                    if candidate in view_df.columns:
+                        company_col = candidate
+                        break
+                if company_col:
+                    view_df = view_df[
+                        view_df[company_col].astype(str).str.contains(search_text, case=False, na=False)
+                    ]
 
-            if rec.get("status_note"):
-                st.caption(f"Note: {rec['status_note']}")
+        st.caption(f"Showing {len(view_df)} of {len(df_master)} companies")
 
-            st.markdown("---")
-            key = rec.get("company_key","")
+        st.download_button(
+            "⬇ Download master_list.csv",
+            df_master.to_csv(index=False).encode("utf-8"),
+            file_name="master_list.csv",
+            mime="text/csv"
+        )
 
-            if status not in ("actioned_crm","actioned_dismissed"):
-                b1, b2, b3 = st.columns([1,1,2])
-                with b1:
-                    if st.button("Add to CRM", key=f"crm_{key}"):
-                        master.action(key, "actioned_crm")
-                        st.success("Marked as CRM — export CSV to get the list")
-                        st.rerun()
-                with b2:
-                    if st.button("Not relevant", key=f"dis_{key}"):
-                        st.session_state[f"show_note_{key}"] = True
+        st.dataframe(view_df, use_container_width=True, height=500)
 
-                if st.session_state.get(f"show_note_{key}"):
-                    note = st.selectbox("Reason", [
-                        "Already a customer",
-                        "Too small",
-                        "Wrong industry",
-                        "Not a real company",
-                        "Duplicate",
-                        "Other",
-                    ], key=f"note_{key}")
-                    if st.button("Confirm", key=f"confirm_{key}"):
-                        master.action(key, "actioned_dismissed", note)
-                        st.session_state[f"show_note_{key}"] = False
-                        st.rerun()
-            else:
-                if st.button("Undo", key=f"undo_{key}"):
-                    master.reset_to_new(key)
-                    st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — RUN DISCOVERY
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_run:
-    col1, col2 = st.columns([2,1])
+    col1, col2 = st.columns([2, 1])
+
     with col1:
         st.markdown('<p class="section-header">Start a Discovery Run</p>', unsafe_allow_html=True)
-        total_q = sum(len(engine.config["queries"].get(c,[])) for c in countries)
+        total_q = sum(len(engine.config["queries"].get(c, [])) for c in countries)
         st.markdown(f"""
-        Searches **{len(countries)} countries** · **{total_q} queries** · **{result_limit} results each**.
+        Searches **{len(countries)} countries** · **{total_q} queries** · **{result_limit} results each**.  
         AI enrichment **{"on" if use_ai else "off"}**.
-        New companies appear in the **Leads** tab automatically.
         """)
+
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
         run_clicked = st.button("Run Discovery", type="primary", use_container_width=True)
@@ -319,30 +348,34 @@ with tab_run:
             st.stop()
 
         os.environ["FIRECRAWL_API_KEY"] = fc_key
+
         if use_ai and ai_key:
             if "OpenAI" in ai_provider:
                 os.environ["OPENAI_API_KEY"] = ai_key
-                os.environ["AI_PROVIDER"]    = "openai"
+                os.environ["AI_PROVIDER"] = "openai"
             else:
                 os.environ["ANTHROPIC_API_KEY"] = ai_key
-                os.environ["AI_PROVIDER"]       = "anthropic"
+                os.environ["AI_PROVIDER"] = "anthropic"
 
-        engine.config["result_limit"]      = result_limit
+        engine.config["result_limit"] = result_limit
         engine.config["use_ai_enrichment"] = use_ai
         get_engine.clear()
         engine = get_engine()
 
-        log_lines    = []
-        log_ph       = st.empty()
+        log_lines = []
+        log_ph = st.empty()
         progress_bar = st.progress(0)
-        status_text  = st.empty()
+        status_text = st.empty()
 
         def progress_cb(msg):
             log_lines.append(msg)
-            css = "log-line-ok" if "✓" in msg else \
-                  "log-line-warn" if ("⚠" in msg or "✗" in msg) else "log-line-info"
+            css = (
+                "log-line-ok" if "✓" in msg else
+                "log-line-warn" if ("⚠" in msg or "✗" in msg) else
+                "log-line-info"
+            )
             lines_html = "".join(
-                '<div class="' + (css if i==len(log_lines)-1 else "log-line-info") + '">' + l + '</div>'
+                '<div class="' + (css if i == len(log_lines) - 1 else "log-line-info") + '">' + l + '</div>'
                 for i, l in enumerate(log_lines[-20:])
             )
             log_ph.markdown(f'<div class="log-box">{lines_html}</div>', unsafe_allow_html=True)
@@ -351,6 +384,7 @@ with tab_run:
             try:
                 rows = engine.run(countries=countries, progress_cb=progress_cb)
                 raw_path, target_path, targets, counts = engine.save_results(rows)
+
                 progress_bar.progress(100)
                 status_text.success(
                     f"Done — {counts['new']} new companies · "
@@ -359,9 +393,12 @@ with tab_run:
                 )
                 st.balloons()
                 st.info("Switch to the Leads tab to review results.")
+
             except Exception as e:
                 st.error(f"Run failed: {e}")
-                import traceback; st.code(traceback.format_exc())
+                import traceback
+                st.code(traceback.format_exc())
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — CASE STUDIES
@@ -372,104 +409,136 @@ with tab_cases:
 
     st.markdown(f"""
     Scrapes **{len(partner_sites)} Nordic partner sites** for named customer references.
-    New companies go straight into the **Leads** tab.
     """)
 
     with st.expander(f"{len(partner_sites)} partner sites configured"):
         for p in partner_sites:
             st.markdown(f"- **{p['name']}** ({p['country']}) — {p['index_url']}")
 
-    csc1, csc2 = st.columns([2,1])
+    csc1, csc2 = st.columns([2, 1])
+
     with csc1:
-        cs_countries = st.multiselect("Countries", ["Denmark","Sweden","Norway"],
-                                      default=["Denmark","Sweden","Norway"], key="cs_c")
+        cs_countries = st.multiselect(
+            "Countries",
+            ["Denmark", "Sweden", "Norway"],
+            default=["Denmark", "Sweden", "Norway"],
+            key="cs_c"
+        )
+
     with csc2:
         st.markdown("<br>", unsafe_allow_html=True)
         scrape_clicked = st.button("Scrape Case Studies", type="primary", use_container_width=True)
 
     fp = [p for p in partner_sites if p["country"] in cs_countries]
-    est = sum(p.get("max_cases",30) for p in fp)
-    st.caption(f"~{est} pages · {len(fp)} partners · ~${round(est*0.015,2)} cost")
+    est = sum(p.get("max_cases", 30) for p in fp)
+    st.caption(f"~{est} pages · {len(fp)} partners · ~${round(est * 0.015, 2)} cost")
 
     if scrape_clicked:
         if not fc_key:
             st.error("Firecrawl API key required.")
             st.stop()
+
         os.environ["FIRECRAWL_API_KEY"] = fc_key
 
         from firecrawl import FirecrawlApp as FC
         from scraper import CaseStudyScraper
-        from masterlist import MasterList
-        import csv as csv_mod
 
         fc_app = FC(api_key=fc_key)
         cs_lines = []
-        cs_log   = st.empty()
-        cs_prog  = st.progress(0)
+        cs_log = st.empty()
+        cs_prog = st.progress(0)
 
         def cs_cb(msg):
             cs_lines.append(msg)
-            css = "log-line-ok" if "✓" in msg else \
-                  "log-line-warn" if ("✗" in msg or "–" in msg) else "log-line-info"
+            css = (
+                "log-line-ok" if "✓" in msg else
+                "log-line-warn" if ("✗" in msg or "–" in msg) else
+                "log-line-info"
+            )
             html = "".join(
-                '<div class="' + (css if i==len(cs_lines)-1 else "log-line-info") + '">' + l + '</div>'
+                '<div class="' + (css if i == len(cs_lines) - 1 else "log-line-info") + '">' + l + '</div>'
                 for i, l in enumerate(cs_lines[-25:])
             )
             cs_log.markdown(f'<div class="log-box">{html}</div>', unsafe_allow_html=True)
 
         with st.spinner("Scraping..."):
             try:
-                scraper  = CaseStudyScraper(fc_app, fp, cs_cb)
-                cs_rows  = scraper.scrape_all()
-                ml       = MasterList()
-                counts   = ml.merge_run(cs_rows)
+                scraper = CaseStudyScraper(fc_app, fp, cs_cb)
+                cs_rows = scraper.scrape_all()
+
+                counts = {"new": len(cs_rows), "updated": 0}
 
                 os.makedirs("outputs", exist_ok=True)
                 ts = datetime.now().strftime("%Y%m%d_%H%M")
                 path = f"outputs/casestudy_{ts}.csv"
-                fields = ["target_company","target_domain","country","erp_detected",
-                          "classification","evidence_type","evidence_url","evidence_title",
-                          "evidence_snippet","source_owner","ai_reason","ai_confidence"]
+
+                fields = [
+                    "target_company", "target_domain", "country", "erp_detected",
+                    "classification", "evidence_type", "evidence_url", "evidence_title",
+                    "evidence_snippet", "source_owner", "ai_reason", "ai_confidence"
+                ]
+
                 with open(path, "w", newline="", encoding="utf-8") as f:
                     w = csv_mod.DictWriter(f, fieldnames=fields, extrasaction="ignore")
-                    w.writeheader(); w.writerows(cs_rows)
+                    w.writeheader()
+                    w.writerows(cs_rows)
 
                 cs_prog.progress(100)
-                st.success(f"{counts['new']} new companies found · {counts['updated']} already known")
-                st.info("Switch to the Leads tab to review.")
+                st.success(f"{counts['new']} companies found · {counts['updated']} already known")
+                st.info("Case study results saved in outputs/.")
 
                 if cs_rows:
                     df_cs = pd.DataFrame(cs_rows)
-                    avail = [c for c in ["target_company","country","erp_detected","source_owner","evidence_url"] if c in df_cs.columns]
-                    st.dataframe(df_cs[avail], use_container_width=True, height=350)
+                    avail = [
+                        c for c in [
+                            "target_company", "country", "erp_detected",
+                            "source_owner", "evidence_url"
+                        ] if c in df_cs.columns
+                    ]
+                    if avail:
+                        st.dataframe(df_cs[avail], use_container_width=True, height=350)
+                    else:
+                        st.dataframe(df_cs, use_container_width=True, height=350)
+
             except Exception as e:
                 st.error(f"Scraping failed: {e}")
-                import traceback; st.code(traceback.format_exc())
+                import traceback
+                st.code(traceback.format_exc())
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — PAST RUNS
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_history:
     st.markdown('<p class="section-header">Past Runs</p>', unsafe_allow_html=True)
+
     all_files = sorted(
         glob.glob("outputs/targets_*.csv") + glob.glob("outputs/casestudy_*.csv"),
         reverse=True,
     )
+
     if not all_files:
         st.info("No past runs yet.")
+
     for tf in all_files:
-        label = tf.replace("outputs/","").replace(".csv","")
-        df_h  = pd.read_csv(tf)
+        label = tf.replace("outputs/", "").replace(".csv", "")
+        df_h = pd.read_csv(tf)
+
         with st.expander(f"{label} — {len(df_h)} rows"):
             if "country" in df_h.columns:
-                c1,c2,c3,c4 = st.columns(4)
+                c1, c2, c3, c4 = st.columns(4)
                 c1.metric("Rows", len(df_h))
-                c2.metric("DK", len(df_h[df_h["country"]=="Denmark"]))
-                c3.metric("SE", len(df_h[df_h["country"]=="Sweden"]))
-                c4.metric("NO", len(df_h[df_h["country"]=="Norway"]))
-            st.download_button(f"Download {label}.csv",
-                               df_h.to_csv(index=False).encode(),
-                               file_name=f"{label}.csv", key=f"dl_{label}")
+                c2.metric("DK", len(df_h[df_h["country"] == "Denmark"]))
+                c3.metric("SE", len(df_h[df_h["country"] == "Sweden"]))
+                c4.metric("NO", len(df_h[df_h["country"] == "Norway"]))
+
+            st.download_button(
+                f"Download {label}.csv",
+                df_h.to_csv(index=False).encode("utf-8"),
+                file_name=f"{label}.csv",
+                key=f"dl_{label}"
+            )
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 5 — CONFIG
@@ -479,60 +548,79 @@ with tab_config:
     cfg = engine.config
 
     with st.expander("Partner domains blocklist"):
-        pt = st.text_area("One domain per line",
-                          "\n".join(sorted(cfg.get("partner_domains",[]))), height=200)
+        pt = st.text_area(
+            "One domain per line",
+            "\n".join(sorted(cfg.get("partner_domains", []))),
+            height=200
+        )
         if st.button("Save partner domains"):
             cfg["partner_domains"] = [d.strip() for d in pt.splitlines() if d.strip()]
-            with open("config.json","w",encoding="utf-8") as f: json.dump(cfg,f,indent=2,ensure_ascii=False)
-            get_engine.clear(); st.success("Saved.")
+            with open("config.json", "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2, ensure_ascii=False)
+            get_engine.clear()
+            st.success("Saved.")
 
     with st.expander("Bad target names"):
-        bt = st.text_area("One name per line",
-                          "\n".join(sorted(cfg.get("bad_target_names",[]))), height=200)
+        bt = st.text_area(
+            "One name per line",
+            "\n".join(sorted(cfg.get("bad_target_names", []))),
+            height=200
+        )
         if st.button("Save bad names"):
             cfg["bad_target_names"] = [n.strip() for n in bt.splitlines() if n.strip()]
-            with open("config.json","w",encoding="utf-8") as f: json.dump(cfg,f,indent=2,ensure_ascii=False)
-            get_engine.clear(); st.success("Saved.")
+            with open("config.json", "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2, ensure_ascii=False)
+            get_engine.clear()
+            st.success("Saved.")
 
     with st.expander("Query library"):
-        for country in ["Denmark","Sweden","Norway"]:
-            qs = cfg.get("queries",{}).get(country,[])
+        for country in ["Denmark", "Sweden", "Norway"]:
+            qs = cfg.get("queries", {}).get(country, [])
             qt = st.text_area(f"{country}", "\n".join(qs), height=150, key=f"q_{country}")
             if st.button(f"Save {country}", key=f"sq_{country}"):
                 cfg["queries"][country] = [q.strip() for q in qt.splitlines() if q.strip()]
-                with open("config.json","w",encoding="utf-8") as f: json.dump(cfg,f,indent=2,ensure_ascii=False)
-                get_engine.clear(); st.success(f"Saved.")
+                with open("config.json", "w", encoding="utf-8") as f:
+                    json.dump(cfg, f, indent=2, ensure_ascii=False)
+                get_engine.clear()
+                st.success(f"Saved.")
 
     with st.expander("Partner sites (case study scraping)"):
-        ps = st.text_area("JSON", json.dumps(cfg.get("partner_sites",[]),indent=2,ensure_ascii=False), height=300)
+        ps = st.text_area(
+            "JSON",
+            json.dumps(cfg.get("partner_sites", []), indent=2, ensure_ascii=False),
+            height=300
+        )
         if st.button("Save partner sites"):
             try:
                 cfg["partner_sites"] = json.loads(ps)
-                with open("config.json","w",encoding="utf-8") as f: json.dump(cfg,f,indent=2,ensure_ascii=False)
-                get_engine.clear(); st.success(f"Saved {len(cfg['partner_sites'])} sites.")
+                with open("config.json", "w", encoding="utf-8") as f:
+                    json.dump(cfg, f, indent=2, ensure_ascii=False)
+                get_engine.clear()
+                st.success(f"Saved {len(cfg['partner_sites'])} sites.")
             except json.JSONDecodeError as e:
                 st.error(f"Invalid JSON: {e}")
-with st.expander("Master list management"):
-    if os.path.exists("master_list.csv"):
-        df_master = pd.read_csv("master_list.csv")
-        csv_bytes = df_master.to_csv(index=False).encode("utf-8")
-        st.markdown(f"**{len(df_master)} companies** tracked across all runs.")
-        st.download_button(
-            "Download master_list.csv",
-            csv_bytes,
-            file_name="master_list.csv",
-            mime="text/csv"
-        )
-    else:
-        st.markdown("**0 companies** tracked across all runs.")
 
-    st.markdown("---")
+    with st.expander("Master list management"):
+        df_master = load_master_df()
 
-    if st.button("Reset master list (delete all history)"):
-        if os.path.exists("master_list.csv"):
-            os.remove("master_list.csv")
-        st.warning("Master list cleared.")
-    
+        if not df_master.empty:
+            csv_bytes = df_master.to_csv(index=False).encode("utf-8")
+            st.markdown(f"**{len(df_master)} companies** tracked across all runs.")
+            st.download_button(
+                "Download master_list.csv",
+                csv_bytes,
+                file_name="master_list.csv",
+                mime="text/csv"
+            )
+        else:
+            st.markdown("**0 companies** tracked across all runs.")
+
+        st.markdown("---")
+
+        if st.button("Reset master list (delete all history)"):
+            if os.path.exists("master_list.csv"):
+                os.remove("master_list.csv")
+            st.warning("Master list cleared.")
 
     with st.expander("Raw config.json"):
         st.json(cfg)
