@@ -126,9 +126,25 @@ tab_leads, tab_run, tab_cases, tab_history, tab_config = st.tabs([
 # TAB 1 — LEADS (rep view)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_leads:
-    from masterlist import MasterList
-    master = MasterList()
-    stats  = master.stats()
+    if os.path.exists("master_list.csv"):
+    df_master = pd.read_csv("master_list.csv")
+else:
+    df_master = pd.DataFrame()
+
+total = len(df_master)
+
+new_count = len(df_master[df_master["status"] == "new"]) if "status" in df_master.columns else 0
+seen_count = len(df_master[df_master["status"] == "seen"]) if "status" in df_master.columns else 0
+crm_count = len(df_master[df_master["status"] == "crm"]) if "status" in df_master.columns else 0
+dismissed_count = len(df_master[df_master["status"] == "dismissed"]) if "status" in df_master.columns else 0
+
+stats = {
+    "total": total,
+    "new": new_count,
+    "seen": seen_count,
+    "crm": crm_count,
+    "dismissed": dismissed_count,
+}
 
     st.markdown(f"""
     <div class="metric-row">
