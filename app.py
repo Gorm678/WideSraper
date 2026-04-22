@@ -261,7 +261,7 @@ with tab_leads:
             if status not in ("actioned_crm","actioned_dismissed"):
                 b1, b2, _ = st.columns([1,1,2])
                 with b1:
-                    if st.button("✅ Add to CRM", key=f"crm_{key}"):
+                    if st.button("✅ Exist In CRM", key=f"crm_{key}"):
                         master.action(key, "actioned_crm")
                         st.success("Added to CRM list")
                         st.rerun()
