@@ -146,7 +146,7 @@ with tab_leads:
         </div>
         <div class="metric-card purple">
             <div class="metric-number">{stats['crm']}</div>
-            <div class="metric-label">Added to CRM</div>
+            <div class="metric-label">In to CRM</div>
         </div>
         <div class="metric-card red">
             <div class="metric-number">{stats['dismissed']}</div>
