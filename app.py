@@ -13,7 +13,7 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="Citruss · ERP Discovery",
+    page_title="Cittros · ERP Discovery",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -73,7 +73,7 @@ st.markdown("""
 <div class="header-bar">
     <div class="header-dot"></div>
     <div>
-        <p class="header-title">Citruss &middot; ERP Discovery</p>
+        <p class="header-title">Cittros &middot; ERP Discovery</p>
         <p class="header-sub">Find Nordic companies using D365FO or Dynamics AX / Axapta</p>
     </div>
 </div>
