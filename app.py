@@ -1,5 +1,5 @@
 """
-app.py — Citruss D365FO Discovery Tool
+app.py — Cittros D365FO Discovery Tool
 Run with: streamlit run app.py
 """
 
